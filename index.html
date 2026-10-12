@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>ito風 数字ならべ</title>
+<style>
+:root{--bg:#f6f3ec;--card:#fff;--ink:#2b2b2b;--sub:#777;--acc:#3b6fd4;--ok:#2e9e5b;--ng:#d44a3b;--line:#e2ddd0}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"Hiragino Sans",sans-serif;padding:14px 16px 40px;max-width:520px;margin:0 auto}
+h1{font-size:18px;margin:4px 0 2px}
+.score{color:var(--sub);font-size:13px;margin-bottom:10px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:12px}
+.topic{font-size:20px;font-weight:700}
+.scale{font-size:13px;color:var(--sub);margin-top:4px}
+.mine{text-align:center}
+.mine .n{font-size:56px;font-weight:800;color:var(--acc);line-height:1.1}
+.mine .l{font-size:12px;color:var(--sub)}
+.hints div{padding:5px 0;border-bottom:1px dashed var(--line);font-size:15px}
+.hints div:last-child{border:0}
+.nm{display:inline-block;min-width:64px;color:var(--sub);font-size:13px}
+input[type=text]{width:100%;font-size:17px;padding:10px;border:1px solid var(--line);border-radius:10px}
+button{font-size:16px;padding:11px 14px;border-radius:10px;border:0;background:var(--acc);color:#fff;font-weight:600}
+button.sub{background:#e9e5da;color:var(--ink)}
+button:disabled{opacity:.4}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.chips span{font-size:13px;background:#eef2fb;color:var(--acc);padding:5px 9px;border-radius:99px}
+.row{display:flex;flex-direction:column;gap:6px}
+.slot{background:none;border:2px dashed var(--acc);color:var(--acc);padding:8px;font-size:14px}
+.pc{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fbfaf6}
+.pc b{font-size:13px;color:var(--sub);font-weight:600}
+.pc .num{float:right;font-size:22px;font-weight:800}
+.pc.ok .num{color:var(--ok)} .pc.bad .num{color:var(--ng)}
+.res{font-size:20px;font-weight:800;text-align:center;margin:6px 0}
+.res.ok{color:var(--ok)} .res.ng{color:var(--ng)}
+.msg{font-size:14px;color:var(--sub);margin:4px 0 8px}
+.pc{overflow:hidden}
+.mvb{float:right;display:flex;gap:6px}
+.mvb button{padding:4px 12px}
+.hide{display:none}
+.mt{margin-top:8px}
+
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.btns button{padding:9px 12px;font-size:14px}
+.stat{font-size:13px;color:var(--sub);margin-top:6px}
+.code{font-size:22px;font-weight:800;letter-spacing:3px;color:var(--acc)}
+.err{color:var(--ng);font-size:14px;margin:6px 0}
+input.code-in{text-transform:uppercase;letter-spacing:3px;text-align:center}
+.me{color:var(--acc)}
+</style>
+</head>
+<body>
+<h1>ito風 数字ならべ</h1>
+<div class="score" id="score"></div>
+<div id="app"></div>
+<script>
+const TOPICS = [
+["生き物の強さ","弱い","強い",[["ダンゴムシ",3],["金魚",10],["ニワトリ",20],["柴犬",30],["人間",45],["ライオン",70],["ヒグマ",80],["シャチ",88],["ゾウ",92]]],
+["食べ物の人気度","不人気","大人気",[["パセリ",5],["ナッツ入りゼリー",15],["ところてん",25],["おでん",45],["うどん",60],["カレー",80],["焼肉",90],["寿司",95]]],
+["無人島に持っていきたい度","いらない","絶対ほしい",[["ハイヒール",3],["電卓",12],["ギター",30],["ロープ",55],["ナイフ",75],["ライター",85],["水",98]]],
+["もののおもさ","軽い","重い",[["羽",2],["消しゴム",8],["スマホ",18],["ノートPC",30],["自転車",50],["冷蔵庫",70],["軽自動車",90],["電車",99]]],
+["値段の高さ","安い","高い",[["ガム",3],["缶ジュース",8],["映画チケット",20],["ブランドバッグ",50],["最新スマホ",60],["新車",85],["マンション",98]]],
+["怖さ","こわくない","超こわい",[["子猫",2],["ピーマン",8],["注射",30],["暗い夜道",45],["ゴキブリ",55],["お化け屋敷",70],["高所",78],["ホラー映画",88],["怒った上司",92]]],
+["速さ","遅い","速い",[["カタツムリ",2],["ナマケモノ",6],["徒歩",15],["自転車",28],["電車",50],["新幹線",70],["飛行機",88],["ロケット",98]]],
+["大きさ","小さい","大きい",[["米粒",2],["消しゴム",8],["スイカ",20],["犬",35],["冷蔵庫",50],["バス",70],["東京タワー",85],["富士山",95]]],
+["眠くなる度","ならない","すぐ寝る",[["ジェットコースター",3],["ライブ",10],["ゲーム",20],["映画館",50],["電車の座席",70],["校長先生の話",85],["お布団",98]]],
+["辛さ","甘い","激辛",[["ケーキ",3],["バナナ",8],["ケチャップ",20],["カレー(中辛)",40],["ワサビ",65],["麻婆豆腐",75],["唐辛子",88],["ハバネロ",98]]],
+["あたたかさ","寒い","暑い",[["南極",2],["冷凍庫",8],["雪の日",18],["春の朝",45],["湯たんぽ",60],["真夏の昼",85],["サウナ",95]]],
+["ワクワク度","退屈","ワクワク",[["待ち時間",3],["洗濯",8],["通勤",15],["スーパー",30],["映画",55],["旅行前日",80],["遊園地",88],["宝くじ当選発表",95]]],
+["おとなっぽさ","子どもっぽい","おとなっぽい",[["おもちゃ",3],["ランドセル",8],["ジュース",20],["スーツ",50],["ワイン",70],["ブラックコーヒー",75],["高級バー",90]]],
+["人気の職業","不人気","大人気",[["お化け屋敷の幽霊役",5],["解体屋",20],["会社員",45],["教師",55],["医者",75],["ゲームクリエイター",85],["YouTuber",90]]],
+["音のうるささ","静か","うるさい",[["雪が降る音",2],["図書館",5],["ささやき声",12],["会話",30],["掃除機",55],["工事現場",75],["花火",88],["雷",95]]],
+["めんどくささ","楽ちん","めんどう",[["あくび",2],["歯みがき",10],["お風呂",20],["洗い物",40],["引っ越し",85],["確定申告",92],["大掃除",78]]],
+["おいしいおやつ","まずい","最高",[["苦い薬",2],["こげたパン",8],["せんべい",35],["クッキー",55],["プリン",75],["ショートケーキ",85],["チョコパフェ",95]]],
+["歴史の古さ","新しい","古い",[["最新スマホ",2],["SNS",8],["テレビ",25],["電話",40],["蒸気機関車",55],["城",75],["ピラミッド",92],["恐竜",99]]],
+["家にあって嬉しい度","いらない","最高",[["壊れた傘",3],["空き箱",10],["掃除機",40],["エアコン",70],["洗濯機",85],["冷蔵庫",92],["Wi-Fi",96]]],
+["高いところ度","低い","高い",[["地面",1],["階段2段",6],["2階",15],["ビル10階",35],["東京タワー",55],["山の頂上",75],["飛行機",90],["宇宙",99]]]
+];
+
+const CPU_NAMES=["ミケ","ポチ","タマ","クロ"];
+const $=id=>document.getElementById(id);
+const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;};
+
+// ===== 状態 =====
+let mode="lobby";           // lobby | solo | room
+let H=1,N=5;                // 人間の数 / 全員の数
+let G=null;                 // 共有ゲーム状態 {gid,seq,seed,rd,row,fin,ok,ng}
+let hints={};               // seed -> {席:言葉}(人間の言葉)
+let myHint=null;            // {k,text}
+let draft="";
+let lobbyMsg="";
+let net=null;
+let gsT=null;
+const myId=Math.random().toString(36).slice(2,10);
+const mySeat=()=>mode==="room"?net.seat:0;
+
+// ===== seed から決まる内容(全員同じ結果) =====
+function xmur3(str){let h=1779033703^str.length;for(let i=0;i<str.length;i++){h=Math.imul(h^str.charCodeAt(i),3432918353);h=h<<13|h>>>19;}
+  return function(){h=Math.imul(h^h>>>16,2246822507);h=Math.imul(h^h>>>13,3266489909);return (h^=h>>>16)>>>0;};}
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const cache={};
+function derive(seed){
+  const key=seed+"|"+H;if(cache[key])return cache[key];
+  const r=mulberry32(xmur3(seed)());
+  const topic=TOPICS[Math.floor(r()*TOPICS.length)];
+  const nums=[],set=new Set();
+  while(nums.length<N){const v=1+Math.floor(r()*100);if(!set.has(v)){set.add(v);nums.push(v);}}
+  const hs=Array(N).fill("");const used=new Set();
+  for(let s=H;s<N;s++){
+    const target=nums[s]+(r()*20-10);
+    const sorted=topic[3].slice().sort((a,b)=>Math.abs(a[1]-target)-Math.abs(b[1]-target));
+    const pick=sorted.find(x=>!used.has(x[0]))||sorted[0];
+    used.add(pick[0]);hs[s]=pick[0];
+  }
+  const row=[...Array(N).keys()];
+  for(let i=N-1;i>0;i--){const j=Math.floor(r()*(i+1));[row[i],row[j]]=[row[j],row[i]];}
+  return cache[key]={topic,nums,hs,row};
+}
+const rid=n=>{let s="";const a="abcdefghijklmnopqrstuvwxyz0123456789";for(let i=0;i<n;i++)s+=a[Math.floor(Math.random()*a.length)];return s;};
+function newGs(){const seed=rid(8);return {gid:rid(6),seq:0,seed,rd:0,row:derive(seed).row,fin:false,ok:0,ng:0};}
+const ID_RE=/^[a-z0-9]{4,16}$/;
+function validGs(g){
+  if(!g||typeof g!=="object")return false;
+  if(typeof g.gid!=="string"||!ID_RE.test(g.gid)||typeof g.seed!=="string"||!ID_RE.test(g.seed))return false;
+  for(const k of ["seq","rd","ok","ng"])if(!Number.isInteger(g[k])||g[k]<0||g[k]>1e6)return false;
+  if(typeof g.fin!=="boolean")return false;
+  if(!Array.isArray(g.row)||g.row.length!==N)return false;
+  const seen=new Set(g.row);
+  if(seen.size!==N||![...seen].every(v=>Number.isInteger(v)&&v>=0&&v<N))return false;
+  return true;
+}
+function adopt(g){
+  if(!validGs(g))return;
+  if(!G||g.seq>G.seq||(g.seq===G.seq&&g.seed>G.seed)){
+    G={gid:g.gid,seq:g.seq,seed:g.seed,rd:g.rd,row:g.row.slice(),fin:g.fin,ok:g.ok,ng:g.ng};
+    render();
+  }
+}
+function hintOf(s){return s>=H?derive(G.seed).hs[s]:((hints[G.seed]||{})[s]||"");}
+function phase(){
+  if(G.fin)return "reveal";
+  for(let s=0;s<H;s++)if(!hintOf(s))return "hint";
+  return "arrange";
+}
+const nameOf=s=>s>=H?CPU_NAMES[s-H]:(s===mySeat()?"あなた":"相手");
+
+// ===== 状態の更新 =====
+function upd(p,imm){
+  G=Object.assign({},G,p,{seq:G.seq+1});
+  render();
+  if(mode==="room"){
+    clearTimeout(gsT);
+    const go=()=>send({t:"gs",seat:net.seat,gs:G});
+    if(imm)go();else gsT=setTimeout(go,350);
+  }
+}
+function move(i,d){
+  const j=i+d;if(j<0||j>=N)return;
+  const row=G.row.slice();[row[i],row[j]]=[row[j],row[i]];
+  upd({row});
+}
+function finish(){
+  const nums=G.row.map(s=>derive(G.seed).nums[s]);
+  const okk=nums.every((x,i)=>i===0||nums[i-1]<x);
+  upd({fin:true,ok:G.ok+(okk?1:0),ng:G.ng+(okk?0:1)},true);
+}
+function nextRound(){
+  const seed=rid(8);
+  upd({seed,rd:G.rd+1,row:derive(seed).row,fin:false},true);
+}
+function submitHint(text){
+  text=text.trim().slice(0,20);if(!text)return;
+  const k=G.seed;(hints[k]=hints[k]||{})[mySeat()]=text;
+  draft="";
+  if(mode==="room"){myHint={k,text};send({t:"hint",seat:net.seat,k,text});}
+  render();
+}
+
+// ===== 通信(ntfy.sh) =====
+const topicUrl=c=>"https://ntfy.sh/ito-"+c.toLowerCase();
+const CODE_RE=/^[ABCDEFGHJKMNPQRSTUVWXYZ2-9]{6}$/;
+function newCode(){const a="ABCDEFGHJKMNPQRSTUVWXYZ23456789";const b=new Uint8Array(6);crypto.getRandomValues(b);return [...b].map(x=>a[x%a.length]).join("");}
+function send(obj,keep){
+  if(!net)return;
+  try{fetch(topicUrl(net.code),{method:"POST",body:JSON.stringify(Object.assign({id:myId},obj)),keepalive:!!keep}).catch(()=>{});}catch(_){}
+}
+const present=s=>{const p=net&&net.peers[s];return !!p&&!p.bye&&Date.now()-p.last<26000;};
+function sendHb(){
+  if(!net||!net.joined)return;
+  const o={t:"hb",seat:net.seat};
+  if(G)o.gs=G;
+  if(myHint&&G&&myHint.k===G.seed)o.h=myHint;
+  send(o);
+}
+function openRoom(code,create){
+  H=2;N=6;mode="room";lobbyMsg="";
+  G=null;hints={};myHint=null;
+  net={code,seat:null,peers:{},es:null,timers:[],joined:false,decided:false};
+  try{
+    const es=new EventSource(topicUrl(code)+"/sse?since=90s");net.es=es;
+    es.onmessage=ev=>{try{const d=JSON.parse(ev.data);if(d.event&&d.event!=="message")return;
+      const m=JSON.parse(d.message);onMsg(m,net&&net.decided?Date.now():(d.time||0)*1000);}catch(_){}};
+  }catch(_){lobbyMsg="通信を開始できませんでした";mode="lobby";net=null;render();return;}
+  if(create)join(0);else setTimeout(decide,2500);
+  render();
+}
+function decide(){
+  if(!net||net.decided)return;
+  net.decided=true;
+  let seat=null;
+  if(!present(0))seat=0;else if(!present(1))seat=1;
+  if(seat===null){leave("この部屋は満員です");return;}
+  join(seat);
+}
+function join(seat){
+  net.decided=true;net.seat=seat;net.joined=true;
+  if(seat===0&&!G)G=newGs();
+  sendHb();
+  net.timers.push(setInterval(sendHb,10000));
+  net.timers.push(setInterval(updateStatus,3000));
+  render();
+}
+function leave(msg){
+  if(net){
+    if(net.joined)send({t:"bye",seat:net.seat},true);
+    try{net.es&&net.es.close();}catch(_){}
+    net.timers.forEach(clearInterval);
+  }
+  net=null;G=null;mode="lobby";lobbyMsg=msg||"";clearTimeout(gsT);
+  render();
+}
+function onMsg(m,tms){
+  if(!net||!m||typeof m!=="object"||typeof m.id!=="string"||m.id.length>20||m.id===myId)return;
+  const s=m.seat;if(s!==0&&s!==1)return;
+  if(net.joined&&s===net.seat)return;
+  const p=net.peers[s]||(net.peers[s]={last:0,bye:false});
+  const was=present(s);
+  if(tms>=p.last){p.last=tms;p.bye=(m.t==="bye");}
+  if(net.joined&&!was&&present(s))sendHb();
+  if(m.t==="hint"){
+    if(typeof m.k==="string"&&ID_RE.test(m.k)&&typeof m.text==="string"){
+      const t=m.text.trim().slice(0,20);
+      if(t){(hints[m.k]=hints[m.k]||{})[s]=t;render();}
+    }
+  }else if(m.t==="hb"||m.t==="gs"){
+    if(m.h&&typeof m.h==="object"&&typeof m.h.k==="string"&&ID_RE.test(m.h.k)&&typeof m.h.text==="string"){
+      const t=m.h.text.trim().slice(0,20);if(t)(hints[m.h.k]=hints[m.h.k]||{})[s]=t;
+    }
+    if(m.gs)adopt(m.gs);
+    render();
+  }
+  updateStatus();
+}
+function updateStatus(){
+  const e=$("stat");if(!e||!net)return;
+  e.textContent=!net.joined?"接続中…(入室を確認しています)":
+    (present(1-net.seat)?"相手: 在席中":"相手: まだいません / 待っています…");
+}
+window.addEventListener("pagehide",()=>{if(net&&net.joined)send({t:"bye",seat:net.seat},true);});
+
+// ===== 画面 =====
+function inviteUrl(){return location.origin+location.pathname+"?room="+net.code;}
+function renderLobby(app){
+  const b=el("div","box");
+  b.append(el("div","topic","あそびかた"));
+  b.append(el("div","msg","数字を言わずにお題で例え合い、親が小さい順に並べる協力ゲーム。2人+CPU4人でオンライン対戦できます。"));
+  const make=el("button",null,"部屋をつくる");make.onclick=()=>openRoom(newCode(),true);
+  b.append(make);
+  b.append(el("div","msg mt","または、招待コードを入力"));
+  const inp=el("input","code-in");inp.type="text";inp.id="code";inp.maxLength=6;inp.placeholder="ABC234";
+  b.append(inp);
+  const go=el("button","sub mt","入室する");
+  go.onclick=()=>{const c=inp.value.trim().toUpperCase();
+    if(!CODE_RE.test(c)){lobbyMsg="コードは6文字の英数字です";render();return;}openRoom(c,false);};
+  b.append(go);
+  if(lobbyMsg)b.append(el("div","err",lobbyMsg));
+  app.append(b);
+  const b2=el("div","box");
+  b2.append(el("div","msg","ひとりで遊ぶ(あなた+CPU4人・オフライン)"));
+  const solo=el("button","sub","ひとりで遊ぶ");
+  solo.onclick=()=>{H=1;N=5;mode="solo";hints={};myHint=null;G=newGs();render();};
+  b2.append(solo);app.append(b2);
+  const b3=el("div","box");
+  b3.append(el("div","msg","このゲームのページをLINEで友だちに送る(開いたあと、それぞれ部屋をつくる/入る)"));
+  const sh=el("button","sub","ゲームのURLをLINEで送る");
+  sh.onclick=()=>{const text="ito風 数字ならべで遊ぼう!\n"+location.origin+location.pathname;
+    window.open("https://line.me/R/msg/text/?"+encodeURIComponent(text),"_blank");};
+  b3.append(sh);app.append(b3);
+}
+function renderTop(app){
+  const b=el("div","box");
+  if(mode==="room"){
+    const line=el("div");line.append(document.createTextNode("部屋コード "));line.append(el("span","code",net.code));
+    b.append(line);
+    const st=el("div","stat");st.id="stat";b.append(st);
+    const bt=el("div","btns");
+    const cp=el("button","sub","招待リンクをコピー");
+    cp.onclick=()=>{try{navigator.clipboard.writeText(inviteUrl()).then(()=>{cp.textContent="コピーしました";});}catch(_){prompt("招待リンク",inviteUrl());}};
+    const ln=el("button",null,"LINEで送る");
+    ln.onclick=()=>{const text="いっしょにito風ゲームをしよう!\n"+inviteUrl();
+      window.open("https://line.me/R/msg/text/?"+encodeURIComponent(text),"_blank");};
+    const lv=el("button","sub","退出");lv.onclick=()=>leave("");
+    bt.append(cp,ln,lv);b.append(bt);
+  }else{
+    b.append(el("div","msg","ひとりで遊ぶ(オフライン)"));
+    const lv=el("button","sub","ロビーへ戻る");lv.onclick=()=>{mode="lobby";G=null;render();};
+    b.append(lv);
+  }
+  app.append(b);
+}
+function renderGame(app){
+  const d=derive(G.seed),me=mySeat(),parent=G.rd%H,ph=phase(),t=d.topic;
+  $("score").textContent=`成功 ${G.ok} ／ 失敗 ${G.ng}`;
+  const b1=el("div","box");
+  b1.append(el("div","topic",t[0]));
+  b1.append(el("div","scale",`1 = ${t[1]} ←→ 100 = ${t[2]}`));
+  b1.append(el("div","scale",`第${G.rd+1}ラウンド ／ 親: ${nameOf(parent)}(並べ替え担当) ／ 全${N}枚`));
+  app.append(b1);
+  const b2=el("div","box mine");
+  b2.append(el("div","l","あなたの数字"));
+  b2.append(el("div","n",String(d.nums[me])));
+  app.append(b2);
+
+  if(ph==="hint"){
+    const hb=el("div","box hints");
+    hb.append(el("div","msg","みんなの言葉"));
+    for(let s=0;s<N;s++){
+      const dv=el("div");dv.append(el("span","nm",nameOf(s)));
+      const h=hintOf(s);dv.append(document.createTextNode(h||"(入力中…)"));hb.append(dv);
+    }
+    app.append(hb);
+    if(!hintOf(me)){
+      const b=el("div","box");
+      b.append(el("div","msg","数字を言わずに、お題にそった言葉で表そう"));
+      const inp=el("input");inp.type="text";inp.id="hint";inp.maxLength=20;
+      inp.placeholder="例:"+t[3][G.rd%t[3].length][0];inp.value=draft;
+      inp.oninput=()=>{draft=inp.value;};
+      b.append(inp);
+      const ch=el("div","chips");
+      t[3].forEach(([w])=>{const c=el("span",null,w);c.onclick=()=>{inp.value=w;draft=w;};ch.append(c);});
+      b.append(el("div","msg","言葉の例(タップで入力)"));b.append(ch);
+      const go=el("button",null,"この言葉で決定");go.onclick=()=>submitHint(inp.value);
+      b.append(go);app.append(b);
+    }else if(mode==="room"){
+      app.append(el("div","msg","相手の入力を待っています…"));
+    }
+    return;
+  }
+
+  const rb=el("div","box");
+  const isParent=me===parent;
+  rb.append(el("div","msg",ph==="arrange"
+    ?(isParent?"あなたが親です。言葉から数字を推測して▲▼で並べ替えよう(上が小さい → 下が大きい)"
+               :`${nameOf(parent)}(親)が並べ替え中です。相談してもOK(上が小さい → 下が大きい)`)
+    :"上が小さい → 下が大きい"));
+  const row=el("div","row");
+  const nums=G.row.map(s=>d.nums[s]);
+  G.row.forEach((s,i)=>{
+    const c=el("div","pc");
+    if(ph==="reveal"){
+      const bad=(i>0&&nums[i-1]>=nums[i])||(i<N-1&&nums[i+1]<=nums[i]);
+      c.classList.add(bad?"bad":"ok");
+      c.append(el("span","num",String(nums[i])));
+    }else if(isParent){
+      const bx=el("span","mvb");
+      const up=el("button","sub","▲");up.disabled=i===0;up.onclick=()=>move(i,-1);
+      const dn=el("button","sub","▼");dn.disabled=i===N-1;dn.onclick=()=>move(i,1);
+      bx.append(up,dn);c.append(bx);
+    }
+    const nm=el("b",s===me?"me":null,nameOf(s)+(s===me&&ph!=="reveal"?"(数字"+d.nums[me]+") ":" "));
+    c.append(nm);
+    c.append(document.createTextNode("「"+hintOf(s)+"」"));
+    row.append(c);
+  });
+  rb.append(row);app.append(rb);
+
+  if(ph==="arrange"&&isParent){
+    const ok=el("button",null,"この順番で確定");ok.onclick=finish;app.append(ok);
+  }
+  if(ph==="reveal"){
+    const res=nums.every((x,i)=>i===0||nums[i-1]<x);
+    app.append(el("div","res "+(res?"ok":"ng"),res?"成功！ きれいに並んだ":"失敗… 順番がくずれた"));
+    const nx=el("button",null,"次のラウンド(親: "+nameOf((G.rd+1)%H)+")");nx.onclick=nextRound;app.append(nx);
+  }
+}
+function render(){
+  const app=$("app");
+  const ae=document.activeElement;
+  const had=ae&&ae.id==="hint";
+  app.textContent="";
+  if(mode==="lobby"){$("score").textContent="";renderLobby(app);return;}
+  renderTop(app);
+  if(mode==="room")updateStatus();
+  if(!G){app.append(el("div","msg","部屋の情報を待っています…(最大10秒ほど)"));return;}
+  renderGame(app);
+  if(had){const i=$("hint");if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length);}}
+}
+
+// 起動: ?room=コード なら自動入室
+(function(){
+  let c="";
+  try{c=(new URLSearchParams(location.search).get("room")||"").toUpperCase();}catch(_){}
+  if(CODE_RE.test(c))openRoom(c,false);else render();
+})();
+
+</script>
+</body>
+</html>
