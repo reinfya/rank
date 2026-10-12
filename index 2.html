@@ -281,123 +281,13 @@ function renderLobby(app){
   const solo=el("button","sub","ひとりで遊ぶ");
   solo.onclick=()=>{H=1;N=5;mode="solo";hints={};myHint=null;G=newGs();render();};
   b2.append(solo);app.append(b2);
+  const b3=el("div","box");
+  b3.append(el("div","msg","このゲームのページをLINEで友だちに送る(開いたあと、それぞれ部屋をつくる/入る)"));
+  const sh=el("button","sub","ゲームのURLをLINEで送る");
+  sh.onclick=()=>{const text="ito風 数字ならべで遊ぼう!\n"+location.origin+location.pathname;
+    window.open("https://line.me/R/msg/text/?"+encodeURIComponent(text),"_blank");};
+  b3.append(sh);app.append(b3);
 }
 function renderTop(app){
   const b=el("div","box");
   if(mode==="room"){
-    const line=el("div");line.append(document.createTextNode("部屋コード "));line.append(el("span","code",net.code));
-    b.append(line);
-    const st=el("div","stat");st.id="stat";b.append(st);
-    const bt=el("div","btns");
-    const cp=el("button","sub","招待リンクをコピー");
-    cp.onclick=()=>{try{navigator.clipboard.writeText(inviteUrl()).then(()=>{cp.textContent="コピーしました";});}catch(_){prompt("招待リンク",inviteUrl());}};
-    const ln=el("button",null,"LINEで送る");
-    ln.onclick=()=>{const text="いっしょにito風ゲームをしよう!\n"+inviteUrl();
-      window.open("https://line.me/R/msg/text/?"+encodeURIComponent(text),"_blank");};
-    const lv=el("button","sub","退出");lv.onclick=()=>leave("");
-    bt.append(cp,ln,lv);b.append(bt);
-  }else{
-    b.append(el("div","msg","ひとりで遊ぶ(オフライン)"));
-    const lv=el("button","sub","ロビーへ戻る");lv.onclick=()=>{mode="lobby";G=null;render();};
-    b.append(lv);
-  }
-  app.append(b);
-}
-function renderGame(app){
-  const d=derive(G.seed),me=mySeat(),parent=G.rd%H,ph=phase(),t=d.topic;
-  $("score").textContent=`成功 ${G.ok} ／ 失敗 ${G.ng}`;
-  const b1=el("div","box");
-  b1.append(el("div","topic",t[0]));
-  b1.append(el("div","scale",`1 = ${t[1]} ←→ 100 = ${t[2]}`));
-  b1.append(el("div","scale",`第${G.rd+1}ラウンド ／ 親: ${nameOf(parent)}(並べ替え担当) ／ 全${N}枚`));
-  app.append(b1);
-  const b2=el("div","box mine");
-  b2.append(el("div","l","あなたの数字"));
-  b2.append(el("div","n",String(d.nums[me])));
-  app.append(b2);
-
-  if(ph==="hint"){
-    const hb=el("div","box hints");
-    hb.append(el("div","msg","みんなの言葉"));
-    for(let s=0;s<N;s++){
-      const dv=el("div");dv.append(el("span","nm",nameOf(s)));
-      const h=hintOf(s);dv.append(document.createTextNode(h||"(入力中…)"));hb.append(dv);
-    }
-    app.append(hb);
-    if(!hintOf(me)){
-      const b=el("div","box");
-      b.append(el("div","msg","数字を言わずに、お題にそった言葉で表そう"));
-      const inp=el("input");inp.type="text";inp.id="hint";inp.maxLength=20;
-      inp.placeholder="例:"+t[3][G.rd%t[3].length][0];inp.value=draft;
-      inp.oninput=()=>{draft=inp.value;};
-      b.append(inp);
-      const ch=el("div","chips");
-      t[3].forEach(([w])=>{const c=el("span",null,w);c.onclick=()=>{inp.value=w;draft=w;};ch.append(c);});
-      b.append(el("div","msg","言葉の例(タップで入力)"));b.append(ch);
-      const go=el("button",null,"この言葉で決定");go.onclick=()=>submitHint(inp.value);
-      b.append(go);app.append(b);
-    }else if(mode==="room"){
-      app.append(el("div","msg","相手の入力を待っています…"));
-    }
-    return;
-  }
-
-  const rb=el("div","box");
-  const isParent=me===parent;
-  rb.append(el("div","msg",ph==="arrange"
-    ?(isParent?"あなたが親です。言葉から数字を推測して▲▼で並べ替えよう(上が小さい → 下が大きい)"
-               :`${nameOf(parent)}(親)が並べ替え中です。相談してもOK(上が小さい → 下が大きい)`)
-    :"上が小さい → 下が大きい"));
-  const row=el("div","row");
-  const nums=G.row.map(s=>d.nums[s]);
-  G.row.forEach((s,i)=>{
-    const c=el("div","pc");
-    if(ph==="reveal"){
-      const bad=(i>0&&nums[i-1]>=nums[i])||(i<N-1&&nums[i+1]<=nums[i]);
-      c.classList.add(bad?"bad":"ok");
-      c.append(el("span","num",String(nums[i])));
-    }else if(isParent){
-      const bx=el("span","mvb");
-      const up=el("button","sub","▲");up.disabled=i===0;up.onclick=()=>move(i,-1);
-      const dn=el("button","sub","▼");dn.disabled=i===N-1;dn.onclick=()=>move(i,1);
-      bx.append(up,dn);c.append(bx);
-    }
-    const nm=el("b",s===me?"me":null,nameOf(s)+(s===me&&ph!=="reveal"?"(数字"+d.nums[me]+") ":" "));
-    c.append(nm);
-    c.append(document.createTextNode("「"+hintOf(s)+"」"));
-    row.append(c);
-  });
-  rb.append(row);app.append(rb);
-
-  if(ph==="arrange"&&isParent){
-    const ok=el("button",null,"この順番で確定");ok.onclick=finish;app.append(ok);
-  }
-  if(ph==="reveal"){
-    const res=nums.every((x,i)=>i===0||nums[i-1]<x);
-    app.append(el("div","res "+(res?"ok":"ng"),res?"成功！ きれいに並んだ":"失敗… 順番がくずれた"));
-    const nx=el("button",null,"次のラウンド(親: "+nameOf((G.rd+1)%H)+")");nx.onclick=nextRound;app.append(nx);
-  }
-}
-function render(){
-  const app=$("app");
-  const ae=document.activeElement;
-  const had=ae&&ae.id==="hint";
-  app.textContent="";
-  if(mode==="lobby"){$("score").textContent="";renderLobby(app);return;}
-  renderTop(app);
-  if(mode==="room")updateStatus();
-  if(!G){app.append(el("div","msg","部屋の情報を待っています…(最大10秒ほど)"));return;}
-  renderGame(app);
-  if(had){const i=$("hint");if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length);}}
-}
-
-// 起動: ?room=コード なら自動入室
-(function(){
-  let c="";
-  try{c=(new URLSearchParams(location.search).get("room")||"").toUpperCase();}catch(_){}
-  if(CODE_RE.test(c))openRoom(c,false);else render();
-})();
-
-</script>
-</body>
-</html>
